@@ -1,6 +1,6 @@
 # Wan2GP H3 Directed Story Loop
 
-**Version 8.0 · Wan2GP v18.84 integration baseline**
+**Version 8.4 · Wan2GP v18.84 integration baseline**
 
 Turn an idea into a multi-scene film using MiniMax H3 and a vision-capable LLM. After each generated clip, the LLM reviews seven sampled frames, records visible consequences and helps direct the next clip. Scenes normally use 3–4 clips, with limits enforced by the script and clean cuts by default. Prompts adapt to the rendered footage rather than being written for the whole episode in advance.
 
@@ -16,11 +16,41 @@ The script uses Wan2GP's MCP interface and launches its own headless Wan2GP proc
 - **Repetition checks:** near-duplicate prompts are repaired before GPU rendering; two reviews positively identifying no progress trigger a fresh scene cut. Incomplete visual coverage alone does not trigger that rule.
 - **Selected transitions:** fresh scene boundaries use clean cuts by default, or motivated fades through black. Exact-frame continuation applies inside scenes; scene boundaries release the old starting image. Location changes are optional when a new objective makes sense in the same place.
 - **Visual review and continuation:** reviews receive four earlier samples at about 8%, 30%, 55%, 78%, plus three ending frames at 90%, 95% and the last frame. Continuation prompt writing still receives the three ending frames, and H3 receives only the exact last decoded PNG.
-- **Acceleration selector:** PDD 8-Step by default, or a local LoRA with a chosen step count.
+- **Acceleration selector:** PDD 8-Step by default, plain FL2VA Pruned without an acceleration LoRA, or a local LoRA. No-LoRA mode asks for steps with a default of 20; local LoRAs default to 6 steps and now ask for a strength (default 1.0).
 - **HEVC output by default**, with an H.264 override.
 - **Sample-aligned audio assembly:** per-clip PCM audio is aligned to the video frame count; AAC is encoded once per assembled movie to avoid accumulating encoder delay at joins.
 - **Resume and rebuild:** reuse saved clips after an interruption, or rebuild the edit without generating videos again.
 - **Organized output:** raw clips stay inside each job; completed movies appear in the output root with an LLM-generated filename.
+
+## Versioning and prompt wording
+
+The script filename stays **`ollama_mcp_wan_story_loop_h3_directed.py`** across releases. The version is recorded near the top in `__version__`, shown at startup and by `--version`, and saved in new jobs as `script_release`. See `CHANGELOG.md` for release history. Job-folder names may still include the release version; they are generated output rather than source filenames.
+
+```bat
+python ollama_mcp_wan_story_loop_h3_directed.py --version
+```
+
+Version 8.4 adds concise wording rules shared by opening and continuation prompts:
+
+- Any intended speech has exact double-quoted words inside its `<d>` tag, attached to a named speaker. Write short lines in sequence; no overlapping voices or vague requests such as “both make excuses.” If no words are provided, describe explicitly silent reactions. Nonverbal laughs/gasps remain allowed.
+- Refer to named characters by their established names in each shot/action. Write “Buffy Summers and Wonder Woman” rather than substituting “the warriors,” “the pair,” or another collective label.
+
+The scene planner receives the same reminders. These guide the LLM; no new dialogue/group-label validation is added to interrupt generation.
+
+## v8.1 review recovery
+
+The visual review's pacing label is advisory. A premature `finish`/`end` closes
+that scene while clips remain; it does not end the film or crash validation.
+Common alternatives such as `end_scene` and `new scene` are normalized. Unknown
+or missing labels defer to the enforced scene schedule. At zero remaining clips,
+the script finishes regardless of the requested label. Original values are kept
+in saved diagnostics. Observations and continuity changes still need valid data;
+the script does not invent evidence to suppress other validation failures.
+
+To recover a v8 job stopped during a visual review, copy the new script beside
+`wgp.py` and run it with `--resume` pointing at the existing job. The saved raw
+clip is reviewed first, then generation continues. Completed clips are not
+regenerated. Keep the original job files and saved generation settings.
 
 ## How v8 directs a scene
 
@@ -36,7 +66,7 @@ The default is a maximum of 4 clips per scene, not an unrestricted “long actio
 
 ## Requirements
 
-- A working **Wan2GP installation with MiniMax H3 support**. **Wan2GP v18.84** is the integration baseline tested with v7. The v8 directing changes have been checked with simulated LLM/MCP runs and real FFmpeg media fixtures; a full GPU-generated v8 episode has not been tested here.
+- A working **Wan2GP installation with MiniMax H3 support**. **Wan2GP v18.84** is the integration baseline tested with v7. The v8/v8.1 directing changes have been checked with simulated LLM/MCP runs and real FFmpeg media fixtures; a full GPU-generated v8 episode has not been tested here.
 - The Python environment used by that Wan2GP installation. Windows/Conda commands are shown below.
 - **FFmpeg and FFprobe on PATH**. FFmpeg must include `libx265` for the default HEVC output, or `libx264` for H.264.
 - A **vision-capable LLM** through OpenRouter or Ollama. Images are sent throughout generation; a text-only model cannot perform the intended visual review.
@@ -47,7 +77,7 @@ Wan2GP, model weights, LoRAs and FFmpeg are not included in this repository.
 ## Installation and script placement
 
 1. Download or clone this repository.
-2. Copy **`ollama_mcp_wan_story_loop_h3_directed_v8_0.py` into your Wan2GP folder, directly beside `wgp.py`**. Do not place it in a subfolder.
+2. Copy **`ollama_mcp_wan_story_loop_h3_directed.py` into your Wan2GP folder, directly beside `wgp.py`**. Do not place it in a subfolder.
 3. Copy `requirements-story-loop.txt` into that same folder. This filename deliberately differs from Wan2GP's own requirements file; do not replace Wan2GP's requirements or README.
 4. Activate your existing Wan2GP environment and install the additional Python dependencies:
 
@@ -89,12 +119,12 @@ The default OpenRouter model is `google/gemma-4-31b-it`. Change it in Expert mod
 From your Wan2GP folder, with its environment active:
 
 ```bat
-python ollama_mcp_wan_story_loop_h3_directed_v8_0.py
+python ollama_mcp_wan_story_loop_h3_directed.py
 ```
 
 Startup asks for:
 
-1. **Acceleration / LoRA** — press Enter for PDD 8-Step. A local LoRA selection also asks for steps.
+1. **Acceleration / LoRA** — press Enter for PDD 8-Step, choose option **2** for no acceleration LoRA (then choose steps, default **20**), or select a local LoRA (steps default to **6**, then strength defaults to **1.0**).
 2. **Simple or Expert mode.**
 3. In **Simple** mode: your idea and runtime in minutes. It uses the configured provider/model without additional provider questions.
 4. In **Expert** mode: backend, model, theme, genre, visual style, notes, clip count and optional first image, unless supplied as command-line arguments.
@@ -106,13 +136,13 @@ Each clip uses 362 frames at 24 FPS, approximately 15.08 seconds. Runtime reques
 ### Start directly in Simple mode
 
 ```bat
-python ollama_mcp_wan_story_loop_h3_directed_v8_0.py --lora pdd --mode simple --idea "An archaeologist discovers a machine beneath an abandoned monastery" --minutes 3
+python ollama_mcp_wan_story_loop_h3_directed.py --lora pdd --mode simple --idea "An archaeologist discovers a machine beneath an abandoned monastery" --minutes 3
 ```
 
 ### Use Ollama instead of OpenRouter
 
 ```bat
-python ollama_mcp_wan_story_loop_h3_directed_v8_0.py --backend ollama --model gemma4:26b
+python ollama_mcp_wan_story_loop_h3_directed.py --backend ollama --model gemma4:26b
 ```
 
 Ollama must already be running with the chosen vision model installed. An OpenRouter API key is not required when using Ollama. The default Ollama endpoint is `http://127.0.0.1:11434/api/generate`; edit `OLLAMA_URL` in the script if your service uses another address.
@@ -122,7 +152,7 @@ Ollama and Wan2GP can compete for GPU/RAM. This reactive workflow does not autom
 ### Start from an image
 
 ```bat
-python ollama_mcp_wan_story_loop_h3_directed_v8_0.py --start-image "C:\Pictures\opening.png"
+python ollama_mcp_wan_story_loop_h3_directed.py --start-image "C:\Pictures\opening.png"
 ```
 
 The image is copied into the job's assets and anchors the first clip. In Simple mode, pass `--start-image` or configure `START_IMAGE` at the top of the script; Simple mode does not add an image-path question.
@@ -131,21 +161,41 @@ The image is copied into the job's assets and anchors the first clip. In Simple 
 
 **Default:** `minimax_h3_fl2va_pruned_pdd`, 8 steps. Wan2GP's PDD preset includes its own accelerator; the script does not stack an external acceleration LoRA on top of it.
 
+**No acceleration LoRA (menu option 2):** selects `minimax_h3_fl2va_pruned` (FL2VA Pruned 20B) with an explicitly empty external LoRA list and multipliers. It asks for a positive integer step count, default **20**. No local LoRA file/folder is required. Euler, guidance 1.0, flow shift 12 and single-phase generation are retained.
+
+```bat
+python ollama_mcp_wan_story_loop_h3_directed.py --lora none --steps 20
+```
+
+The CLI example skips the acceleration questions; Simple/Expert is still asked next. Omit `--steps` to be prompted with the 20-step default. This selects the plain pruned preset rather than trying to disable PDD's built-in accelerator. Source weight precision follows Wan2GP's existing configuration.
+
+Start a **new run** when comparing acceleration modes: `--resume` deliberately restores that job's original model, steps and LoRA selection, and rejects overrides. It also reuses the previous ending frame, which may already contain a duplicated character. The no-LoRA option enables comparison; it does not guarantee that character duplication will disappear.
+
 Other `.safetensors` files are listed from:
 
 ```text
 YOUR_WAN2GP_FOLDER\loras\minimax_h3
 ```
 
-Subfolders are included. Selecting a local LoRA switches to **`minimax_h3_fl2va_pruned`** (FL2VA Pruned 20B), applies that one adapter at strength **1.0**, and asks for the step count. The input defaults to **6 steps**; this is editable and is not a universal recommendation for every adapter. Choose a LoRA compatible with the pruned FL2VA base.
+Subfolders are included. Selecting a local LoRA switches to **`minimax_h3_fl2va_pruned`** (FL2VA Pruned 20B), applies that one adapter and asks for the step count followed by its strength. The input defaults to **6 steps**; this is editable and is not a universal recommendation for every adapter. The strength prompt defaults to **1.0** and accepts finite nonnegative values such as **0.5** or **0.7**. The interactive prompt also accepts a decimal comma. Choose a LoRA compatible with the pruned FL2VA base.
 
 For example, if already installed in that folder:
 
 ```bat
-python ollama_mcp_wan_story_loop_h3_directed_v8_0.py --lora "TaoMate-H3-FL2VA-3Step-ComfyUI-BF16.safetensors" --steps 6
+python ollama_mcp_wan_story_loop_h3_directed.py --lora "TaoMate-H3-FL2VA-3Step-ComfyUI-BF16.safetensors" --steps 6 --lora-strength 0.7
 ```
 
-No LoRAs are downloaded by this script's selector. The selected adapter and steps are saved with the job and restored on resume.
+For the Turbo adapter, for example:
+
+```bat
+python ollama_mcp_wan_story_loop_h3_directed.py --lora "minimax_h3_turbo_v4_step600_ema.safetensors" --steps 6 --lora-strength 0.5
+```
+
+Use `--lora-strength` to skip the strength question. When it is omitted for a custom LoRA, the script asks and Enter selects 1.0. PDD and no-LoRA modes do not ask for a strength; supplying the flag with either mode is an error. A strength of zero is accepted but does not change the selected mode or step count; use `--lora none` for the plain model's 20-step setup.
+
+The selected scalar is passed to MCP as `loras_multipliers` and saved in `generation_config`. Resume retains it, including older jobs saved at 1.0, and rejects a new `--lora-strength` override. Start a new job to compare strengths. Lower strength is an experimental setting, not a guarantee that duplicated people will disappear.
+
+No LoRAs are downloaded by this script's selector. The selected mode, adapter (if any), strength and steps are saved with the job and restored on resume. PDD remains locked to 8 steps.
 
 ## Output layout
 
@@ -154,7 +204,7 @@ New v8 jobs use **`outputs_story_loop_h3_v8`**. Resuming an older job keeps that
 | Location | Contents |
 | --- | --- |
 | `outputs_story_loop_h3_v8/Moonlit Reckoning.mp4` | A completed film with a theme-based LLM filename |
-| `outputs_story_loop_h3_v8/directed_v8_0_<timestamp>/raw/` | Original standalone segment videos |
+| `outputs_story_loop_h3_v8/directed_v8_3_<timestamp>/raw/` | Original standalone segment videos |
 | `JOB_FOLDER/frames/` and `JOB_FOLDER/sheets/` | Sampled ending frames, exact continuation anchors and contact sheets |
 | `JOB_FOLDER/director/` | Saved director requests, replies and filename request |
 | `JOB_FOLDER/story_manifest.json` | Saved settings, clip paths, scene decisions, continuity ledger and resume state |
@@ -172,7 +222,7 @@ Newly generated raw clips go into the current job. Resuming an older job preserv
 Keep the complete job folder, its raw clips and referenced LoRA files. Resume using the **job folder**, not a movie filename:
 
 ```bat
-python ollama_mcp_wan_story_loop_h3_directed_v8_0.py --resume "C:\AI\Wan2GP\outputs_story_loop_h3_v8\directed_v8_0_YOUR_JOB"
+python ollama_mcp_wan_story_loop_h3_directed.py --resume "C:\AI\Wan2GP\outputs_story_loop_h3_v8\directed_v8_3_YOUR_JOB"
 ```
 
 Completed raw clips are reused. If the run stopped after saving a clip but before reviewing its ending, that review is retried before generating the next clip. Saved generation settings and the filename are retained. Directed v6/v7 jobs are also accepted, with v8 directing limits applied to future clips. An already overlong active scene is closed before planning another. Legacy text reviews do not automatically become confirmed eliminations. Existing raw files are kept in place. Starting a new v8 run gives the clearest comparison; resuming or reassembling cannot repair repetitive footage already rendered.
@@ -180,7 +230,7 @@ Completed raw clips are reused. If the run stopped after saving a clip but befor
 ## Rebuild the edit only
 
 ```bat
-python ollama_mcp_wan_story_loop_h3_directed_v8_0.py --assemble "C:\AI\Wan2GP\outputs_story_loop_h3_v8\directed_v8_0_YOUR_JOB"
+python ollama_mcp_wan_story_loop_h3_directed.py --assemble "C:\AI\Wan2GP\outputs_story_loop_h3_v8\directed_v8_3_YOUR_JOB"
 ```
 
 This does not start Wan2GP or request new video generations. It uses the saved clips and cached edits where compatible. Complete directed jobs are exported to the output root; incomplete edits remain inside the job folder. Older jobs without a stored title can use an offline theme-based filename.
@@ -190,7 +240,7 @@ This does not start Wan2GP or request new video generations. It uses the saved c
 HEVC/x265 is the default for new generation, resume and assembly. The old `--hevc` flag is still accepted. To choose H.264/x264 instead:
 
 ```bat
-python ollama_mcp_wan_story_loop_h3_directed_v8_0.py --h264
+python ollama_mcp_wan_story_loop_h3_directed.py --h264
 ```
 
 Use **Extra notes** in Expert mode to guide pacing, dialogue, character appearance and transitions. For example: `An investigation told through distinct clues, decisions and consequences. Prefer cuts. Keep clothing and damage consistent. No background music.`
@@ -198,13 +248,13 @@ Use **Extra notes** in Expert mode to guide pacing, dialogue, character appearan
 Theme, genre, style and notes accept `@file.txt` for longer input. Example:
 
 ```bat
-python ollama_mcp_wan_story_loop_h3_directed_v8_0.py --lora pdd --mode expert --theme "@idea.txt" --notes "@notes.txt"
+python ollama_mcp_wan_story_loop_h3_directed.py --lora pdd --mode expert --theme "@idea.txt" --notes "@notes.txt"
 ```
 
 View all command-line options:
 
 ```bat
-python ollama_mcp_wan_story_loop_h3_directed_v8_0.py --help
+python ollama_mcp_wan_story_loop_h3_directed.py --help
 ```
 
 ## Troubleshooting
