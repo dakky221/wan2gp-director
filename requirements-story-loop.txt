@@ -1,0 +1,7 @@
+# Additional dependencies for the story-loop script.
+# Install in your existing Wan2GP Python environment.
+requests
+Pillow
+openai
+mcp
+python-dotenv
