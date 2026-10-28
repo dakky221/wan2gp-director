@@ -1,6 +1,6 @@
 # Wan2GP H3 Directed Story Loop
 
-**Version 8.4 · Wan2GP v18.84 integration baseline**
+**Version 8.4.1 · Wan2GP v18.84 integration baseline**
 
 Turn an idea into a multi-scene film using MiniMax H3 and a vision-capable LLM. After each generated clip, the LLM reviews seven sampled frames, records visible consequences and helps direct the next clip. Scenes normally use 3–4 clips, with limits enforced by the script and clean cuts by default. Prompts adapt to the rendered footage rather than being written for the whole episode in advance.
 
@@ -15,6 +15,7 @@ The script uses Wan2GP's MCP interface and launches its own headless Wan2GP proc
 - **Persistent continuity:** saved character status, prop changes and recent observed/uncertain events guide subsequent prompts. Confirmed eliminated characters cannot be reassigned as active cast.
 - **Repetition checks:** near-duplicate prompts are repaired before GPU rendering; two reviews positively identifying no progress trigger a fresh scene cut. Incomplete visual coverage alone does not trigger that rule.
 - **Selected transitions:** fresh scene boundaries use clean cuts by default, or motivated fades through black. Exact-frame continuation applies inside scenes; scene boundaries release the old starting image. Location changes are optional when a new objective makes sense in the same place.
+- **Explicit prompt language:** established character names, exact quoted dialogue and one speaker at a time. The story and cast come from the supplied idea and creative brief.
 - **Visual review and continuation:** reviews receive four earlier samples at about 8%, 30%, 55%, 78%, plus three ending frames at 90%, 95% and the last frame. Continuation prompt writing still receives the three ending frames, and H3 receives only the exact last decoded PNG.
 - **Acceleration selector:** PDD 8-Step by default, plain FL2VA Pruned without an acceleration LoRA, or a local LoRA. No-LoRA mode asks for steps with a default of 20; local LoRAs default to 6 steps and now ask for a strength (default 1.0).
 - **HEVC output by default**, with an H.264 override.
@@ -22,22 +23,11 @@ The script uses Wan2GP's MCP interface and launches its own headless Wan2GP proc
 - **Resume and rebuild:** reuse saved clips after an interruption, or rebuild the edit without generating videos again.
 - **Organized output:** raw clips stay inside each job; completed movies appear in the output root with an LLM-generated filename.
 
-## Versioning and prompt wording
+## Version information
 
-The script filename stays **`ollama_mcp_wan_story_loop_h3_directed.py`** across releases. The version is recorded near the top in `__version__`, shown at startup and by `--version`, and saved in new jobs as `script_release`. See `CHANGELOG.md` for release history. Job-folder names may still include the release version; they are generated output rather than source filenames.
+The script filename stays **`ollama_mcp_wan_story_loop_h3_directed.py`** across releases. Its internal `__version__` is shown at startup and with `--version`. Release changes are documented in `CHANGELOG.md`.
 
-```bat
-python ollama_mcp_wan_story_loop_h3_directed.py --version
-```
-
-Version 8.4 adds concise wording rules shared by opening and continuation prompts:
-
-- Any intended speech has exact double-quoted words inside its `<d>` tag, attached to a named speaker. Write short lines in sequence; no overlapping voices or vague requests such as “both make excuses.” If no words are provided, describe explicitly silent reactions. Nonverbal laughs/gasps remain allowed.
-- Refer to named characters by their established names in each shot/action. Write “Buffy Summers and Wonder Woman” rather than substituting “the warriors,” “the pair,” or another collective label.
-
-The scene planner receives the same reminders. These guide the LLM; no new dialogue/group-label validation is added to interrupt generation.
-
-## v8.1 review recovery
+## Review recovery
 
 The visual review's pacing label is advisory. A premature `finish`/`end` closes
 that scene while clips remain; it does not end the film or crash validation.

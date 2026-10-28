@@ -1,10 +1,14 @@
 # Changelog
 
+## 8.4.1
+
+- Make prompt guidance and public documentation character-agnostic while retaining explicit cast references and scripted sequential dialogue.
+
 ## 8.4
 
 - Use the permanent script filename `ollama_mcp_wan_story_loop_h3_directed.py`. Keep the release in `__version__`, the startup/CLI version display, new-job metadata and this changelog.
 - Require exact double-quoted dialogue within `<d>` tags, tied to a named speaker. Request one speaker at a time; replace vague/overlapping speech beats with sequential quoted lines or silent reactions.
-- Require established names in shot/action descriptions rather than collective substitutes such as “the warriors” or “the pair.”
+- Require established names in shot/action descriptions rather than ambiguous collective labels.
 - Share the wording rules across opening and continuation prompt builders, and reinforce them in scene/brief planning. No new semantic validation or GPU/media changes.
 - Retain the configurable LoRA strength, no-LoRA option and prior review recovery/directing fixes.
 

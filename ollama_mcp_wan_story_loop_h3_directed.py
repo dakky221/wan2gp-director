@@ -1,4 +1,4 @@
-"""MiniMax H3 Directed Story Loop v8.4 — bounded reactive directing.
+"""MiniMax H3 Directed Story Loop v8.4.1 — bounded reactive directing.
 
 Place this script beside wgp.py and run in the existing Wan2GP environment:
     python -m pip install requests pillow openai mcp python-dotenv
@@ -55,7 +55,7 @@ cannot repair repetition already present in rendered footage.
 """
 
 # Release version: keep this filename stable when publishing updates.
-__version__ = "8.4"
+__version__ = "8.4.1"
 
 import argparse
 from difflib import SequenceMatcher
@@ -245,14 +245,13 @@ the old location or continuing its motion.
 EVERY clip's prompt must be self-contained. H3 cannot read previous prompts,
 story history, the director plan or character cards. At the first appearance of
 each recurring character in EVERY prompt, reintroduce their character type,
-distinctive appearance, clothing and established speaker ID, such as "the human
-diplomat in a high-collar white uniform (S1)". Preserve these identities and IDs
+distinctive appearance, clothing and established speaker ID. Preserve these identities and IDs
 across clips. Use descriptive names in action sentences, not bare S1/S2 labels.
 Include the actual place, important objects and state needed to understand this
 clip. Never write "same as before" instead of a description.
-In every shot/action, identify named characters by their established names.
-Write "Buffy Summers and Wonder Woman", never replace them with "the warriors",
-"the pair", "the women" or similar collective labels that could imply new people.
+In every shot/action, identify participants by their established names. Do not
+replace named characters with generic group labels or introduce anonymous extras
+as substitutes for the existing cast.
 
 Use exactly these three fields, in this order:
 integrated_multimodal_description: [Shot 1] ...
@@ -267,14 +266,13 @@ Number shots sequentially; cut times increase and stay inside this clip's durati
 Do not timestamp ordinary actions. Describe camera type, speed and amplitude
 only when meaningful; a fixed camera is fine.
 
-Include dialogue, singing or narration only when requested. Every intended spoken
-line needs exact words in double quotes inside its dialogue tag, attached to the
-named speaker: Buffy Summers (S1) says <d>[English] "We need to talk."</d>.
+Include dialogue, singing or narration only when requested. Attribute every line
+to its established character name and speaker ID. Put exact words in double quotes
+inside the dialogue tag: <d>[Language] "..."</d>, using the requested language label.
 Only one speaker talks at a time; write short, separate lines in sequence.
-Never request vague or unscripted speech such as "both make excuses", "they argue",
-"mumbles something", or overlapping voices. Convert such a beat into exact quoted
-lines or explicitly silent reactions with closed mouths. Nonverbal laughs/gasps
-may be sound cues, but must not imply unwritten words. Keep the requested language.
+Do not request unscripted conversations or overlapping dialogue. Convert intended
+speech into exact quoted lines or explicitly silent reactions with closed mouths.
+Nonverbal laughs/gasps may be sound cues, but must not imply unwritten words.
 For voiceover say "says in an off-screen voiceover" and keep visible lips closed.
 For speech across cuts use <scenetrans> at both connections; use <cutoff> only
 for an intentionally interrupted ending. Put exact visible text in double quotes.
@@ -411,7 +409,7 @@ unseen requested characters while there is room, and budget for a final outcome.
 Use one clear development per clip. Beats must differ and advance causally:
 establish/act, turn or consequence, then a readable local outcome. The final beat
 MUST settle this scene, never introduce another attack or ask for an extension.
-Name each participant explicitly in beats, not "the warriors" or "the pair".
+Name each participant explicitly in beats rather than using collective labels.
 If a beat includes speech, specify exact quoted lines for named speakers in
 sequence; no overlapping/unscripted dialogue. Otherwise use silent reactions.
 For the FINALE, conclude the whole film within these beats; no new subplot.
@@ -1897,9 +1895,9 @@ A new scene must change the situation, not merely restart a failed action.
 Do not force relocation at every scene. Default to no background music
 unless the user requests music or a musical premise clearly requires it.
 Every H3 clip must reintroduce visible/speaking characters with identifying details.
-Use established names rather than collective roles such as "the warriors".
+Use established character names rather than collective labels.
 Any intended speech needs exact quoted lines, one named speaker at a time;
-never ask for overlapping voices or vague chatter/excuses without actual words.
+never ask for overlapping voices or unspecified speech.
 Damage, props and actions must remain consistent with actually rendered footage.
 
 This is ONLY a creative brief, not a screenplay, fixed shot list, scene schedule
